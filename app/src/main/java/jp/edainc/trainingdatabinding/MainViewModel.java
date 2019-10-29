@@ -2,30 +2,45 @@ package jp.edainc.trainingdatabinding;
 
 import android.view.View;
 
-import androidx.databinding.ObservableField;
-import androidx.databinding.ObservableInt;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.ViewModel;
 
-public class MainViewModel {
-    // ObservableFieldは、非同期的に値を変更したり、変更を通知したりできるオブジェクト
-    private ObservableInt counter = new ObservableInt(0);
-    private ObservableField<String> copiedCount = new ObservableField<>("");
+public class MainViewModel extends ViewModel {
+    // LiveDataはObservableFieldと同じ、値の変更を通知できるオブジェクト
+    // ObservableFieldと違い、値を監視しているActivity/Fragmentが破棄されたら自動で関係をクリアする
+    // (＝エラーが起きなくなり安全）
+    private MutableLiveData<Integer> counter = new MutableLiveData<>(0);
+    private MutableLiveData<String> copiedCount = new MutableLiveData<>("");
 
-    public ObservableInt getCounter() {
+    public LiveData<Integer> getCounter() {
         return counter;
     }
 
-    public ObservableField<String> getCopiedCount() {
+    public LiveData<String> getCopiedCount() {
         return copiedCount;
     }
 
     // OnClickにバインドするためのメソッド
     // OnClickListenerインターフェースに合わせて作成する
     public void addCount(View view) {
-        counter.set(counter.get() + 1);
+        final Integer counterValue = counter.getValue();
+        if (counterValue != null) {
+            counter.postValue(counterValue + 1);
+            // counter.setValue(counterValue + 1);
+            // 上のようにも書ける。違いはスレッドに対する扱い。
+            // setValueメソッドをメインスレッド以外から呼び出すとエラーになる。
+        }
     }
 
     // OnClickにバインドするためのメソッド
     public void copyCount(View view) {
-        copiedCount.set(String.valueOf(counter.get()));
+        copiedCount.postValue(String.valueOf(counter.getValue()));
+    }
+
+    @Override
+    protected void onCleared() {
+        // 非同期処理などを使っている場合はこのタイミングでキャンセルする
+        super.onCleared();
     }
 }
